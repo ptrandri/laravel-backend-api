@@ -23,16 +23,11 @@ use App\Http\Controllers\API\TicketController;
 // });
 
 
-Route::controller(RegisterController::class)->group(function(){
-    Route::post('register', 'register');
-    Route::post('login', 'login');
-    // Route::post('logout', 'logout');
-});
+Route::post('register', [RegisterController::class, 'register']);
+Route::post('login', [RegisterController::class, 'login']);
 
-Route::group(['middleware' => ['auth:sanctum']], function () {
-    Route::post('/logout', [RegisterController::class, 'logout']);
-});
-
-Route::middleware('auth:sanctum')->group( function () {
+// Routes protected by Sanctum middleware
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('logout', [RegisterController::class, 'logout']);
     Route::resource('tickets', TicketController::class);
 });
