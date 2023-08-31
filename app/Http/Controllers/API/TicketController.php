@@ -8,6 +8,7 @@ use App\Http\Resources\TicketResource;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use App\Http\Controllers\API\BaseController as BaseController;
+use Illuminate\Database\QueryException;
 
 class TicketController extends BaseController
 {
@@ -35,7 +36,8 @@ class TicketController extends BaseController
         ]);
 
         if ($validator->fails()) {
-            return $this->sendError('Validation Error.', $validator->errors());
+            return $this->sendError('Validation Error.', $validator->errors(), 422);
+
         }
 
         $ticket = Ticket::create($validator->validated());
@@ -50,9 +52,10 @@ class TicketController extends BaseController
         try {
             $ticket = Ticket::findOrFail($id);
         } catch (ModelNotFoundException $e) {
-            return $this->sendError('Ticket not found.');
+            return $this->sendError('Ticket not found.', [], 404); // 404 Not Found
         }
         return $this->sendResponse(new TicketResource($ticket), 'Ticket retrieved successfully.');
+        
     }
 
     /**
@@ -70,7 +73,7 @@ class TicketController extends BaseController
         ]);
 
         if ($validator->fails()) {
-            return $this->sendError('Validation Error.', $validator->errors());
+            return $this->sendError('Validation Error.', $validator->errors(), 422);
         }
         $ticket->update($validator->validated());
         return $this->sendResponse(new TicketResource($ticket), 'Ticket updated successfully.');
@@ -81,10 +84,14 @@ class TicketController extends BaseController
      */
     public function destroy(Ticket $ticket)
     {
-        if (!$ticket->exists) {
-            return $this->sendError('Ticket not found.');
+        try {
+            $ticket->delete();
+            return $this->sendResponse([], 'Ticket deleted successfully.');
+        } catch (ModelNotFoundException $e) {
+            return $this->sendError('Ticket not found.', [], 404); // 404 Not Found
+        } catch (QueryException $e) {
+            return $this->sendError('Database Error.', ['error' => $e->getMessage()], 500); // 500 Internal Server Error
         }
-        $ticket->delete();
-        return $this->sendResponse([], 'Ticket deleted successfully.');
     }
+  
 }
