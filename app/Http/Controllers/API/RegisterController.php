@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Controllers\API\BaseController as BaseController;
+use Illuminate\Http\Response;
+
    
 class RegisterController extends BaseController
 {
@@ -23,18 +25,16 @@ class RegisterController extends BaseController
             'password' => 'required',
             'c_password' => 'required|same:password',
         ]);
-   
-        if($validator->fails()){
-            return $this->sendError('Validation Error.', $validator->errors());       
+
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error', $validator->errors(), Response::HTTP_UNPROCESSABLE_ENTITY);
         }
-   
+
         $input = $request->all();
         $input['password'] = bcrypt($input['password']);
         $user = User::create($input);
-        $success['token'] =  $user->createToken('MyApp')->plainTextToken;
-        $success['name'] =  $user->name;
-   
-        return $this->sendResponse($success, 'User register successfully.');
+        $token = $user->createToken('MyApp')->plainTextToken;
+        return $this->sendResponse(['token' => $token, 'name' => $user->name], 'User registered successfully.');
     }
    
     /**
@@ -44,34 +44,31 @@ class RegisterController extends BaseController
      */
     public function login(Request $request)
     {
-        if(Auth::attempt(['email' => $request->email, 'password' => $request->password])){ 
-            $user = Auth::user(); 
-
-            // revoke token
+        if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+            $user = Auth::user();
+            // Revoke all tokens for the user
             $user->tokens->each(function ($token, $key) {
                 $token->delete();
             });
-            // create the token
+            // Create a new token
             $token = $user->createToken('MyApp')->plainTextToken;
-            $success['token'] = $token;
-            $success['name'] = $user->name;
-            
-   
-            return $this->sendResponse($success, 'User login successfully.');
-            }else{
-            return $this->sendError('Unauthorised.', ['error' => 'Unauthorised']);
-            }
+            return $this->sendResponse(['token' => $token, 'name' => $user->name], 'User login successfully.');
+        } else {
+            return $this->sendError('Unauthorized', ['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
+        }
     }
 
     public function logout(Request $request)
     {
-        if ($request->user()) {
-            $request->user()->tokens->each(function ($token, $key) {
+        $user = $request->user();
+        if ($user) {
+            // Revoke all tokens for the user
+            $user->tokens->each(function ($token, $key) {
                 $token->delete();
             });
-            return $this->sendResponse([], 'User logged out successfully.');
+            return $this->sendResponse([], 'User logged out successfully.', Response::HTTP_NO_CONTENT);
         } else {
-            return $this->sendError('Unauthorized.', ['error' => 'Unauthorized'], 401);
+            return $this->sendError('Unauthorized', ['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
         }
     }
     
