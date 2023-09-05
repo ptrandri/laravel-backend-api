@@ -34,7 +34,9 @@ class RegisterController extends BaseController
         $input['password'] = bcrypt($input['password']);
         $user = User::create($input);
         $token = $user->createToken('MyApp')->plainTextToken;
-        return $this->sendResponse(['token' => $token, 'name' => $user->name], 'User registered successfully.');
+        // return $this->sendResponse(['token' => $token, 'name' => $user->name], 'User registered successfully.');
+        return response()->json(['token' => $token, 'name' => $user->name], 201);
+
     }
    
     /**
@@ -52,7 +54,8 @@ class RegisterController extends BaseController
             });
             // Create a new token
             $token = $user->createToken('MyApp')->plainTextToken;
-            return $this->sendResponse(['token' => $token, 'name' => $user->name], 'User login successfully.');
+            // return $this->sendResponse(['token' => $token, 'name' => $user->name], 'User login successfully.');
+            return response()->json(['message' => 'User login successfully.', 'token' => $token, 'name' => $user->name], 201);
         } else {
             return $this->sendError('Unauthorized', ['error' => 'Unauthorized'], Response::HTTP_UNAUTHORIZED);
         }
